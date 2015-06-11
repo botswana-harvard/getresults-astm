@@ -8,6 +8,8 @@ from astm.records import (
     TerminatorRecord
 )
 
+from getresults.models import Result, Panel
+
 
 __all__ = ['Header', 'CommonPatient', 'CommonOrder',
            'CommonResult', 'CommonComment', 'Terminator']
@@ -36,12 +38,14 @@ class TestField(Field):
         return str(value)
 
     def _set_value(self, value):
-        if not isinstance(value, (list, )):
+        if isinstance(value, (list, )):
+            value = value[3]
+        else:
             try:
                 value = self._get_value(value)
             except Exception:
                 raise TypeError('List value expected, got %r' % value)
-        return super(TestField, self)._set_value(value[3])
+        return super(TestField, self)._set_value(value)
 
 
 class Header(HeaderRecord):
@@ -54,7 +58,7 @@ class Header(HeaderRecord):
 class CommonPatient(PatientRecord):
     """ASTM patient record."""
     birthdate = DateField()
-    laboratory_id = TextField(required=True, length=16)
+    laboratory_id = TextField(length=16)
     location = TextField(length=20)
     name = ComponentField(PatientName)
     practice_id = TextField(required=True, length=12)
@@ -82,7 +86,7 @@ class CommonResult(ResultRecord):
     instrument = TextField(required=True, length=5)
     operator = ComponentField(ResultOperator)
     status = SetField(default='F', values=('P', 'F'))
-    test = TestField(required=True)
+    test = TestField(required=True, length=10)
     value = TextField(required=True, length=20)
 
 

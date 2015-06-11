@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class Panel(models.Model):
+class Sender(models.Model):
 
     name = models.CharField(
         max_length=50,
@@ -12,5 +12,5 @@ class Panel(models.Model):
         return self.name
 
     class Meta:
-        app_label = 'getresults_csv'
+        app_label = 'getresults'
         ordering = ('name', )
