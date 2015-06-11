@@ -15,7 +15,7 @@ class DispatcherDbMixin(object):
 
     def save_to_db(self, header=None, patient=None, order=None, results=None, comment=None):
         header_record = header or self.records['H']
-        patient_record = patient or self.records['P']
+        # patient_record = patient or self.records['P']
         order_record = order or self.records['O']
         result_records = results or self.records['R']
         sender = self.sender(header_record.sender)
