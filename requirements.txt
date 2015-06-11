@@ -1,0 +1,6 @@
+Django>=1.8.2
+Unipath
+django-simple-history
+python-dateutil
+python-astm
+-e git+https://github.com/botswana-harvard/getresults@develop#egg=edc-base
