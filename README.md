@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/botswana-harvard/getresults-astm.svg?branch=develop)](https://travis-ci.org/botswana-harvard/getresults-astm)
+
 # getresults-astm
 
-Customizes python-astm for use with getresults lims, etc.
+ASTM interface for getresults using python-astm.
+

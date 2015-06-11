@@ -16,8 +16,8 @@ setup(
     author_email='ew2789@gmail.com',
     packages=find_packages(),
     include_package_data=True,
-    url='http://github/erikvw/getresults-astm',
-    license='GPL licence, see LICENCE',
+    url='http://github/botswana-harvard/getresults-astm',
+    license='GPL license, see LICENSE',
     description='ASTM analyzer interface for getresults using python-astm',
     long_description=README,
     zip_safe=False,
@@ -28,6 +28,7 @@ setup(
         'unipath>=1.1',
         'python-dateutil',
         'python-astm',
+        'pytz',
         '-e git+https://github.com/botswana-harvard/getresults@develop#egg=edc-base',
     ],
     classifiers=[
