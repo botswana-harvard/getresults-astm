@@ -29,11 +29,13 @@ class TestGetresult(TestCase):
         mixin = DispatcherDbMixin()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
+        message = '2P|1|WT33721|||^||||||||||||||||||20150108072200|||||||||'
+        patient = CommonPatient(*decode_record(message[1:]))
         message = '3O|1|WT33721||ALL|R|20150108072200|||||X||||1||||||||||F'
         order = CommonOrder(*decode_record(message[1:]))
         message = '4R|1|^^^ALPL^^^^148.1|44.42893|||N||F||^System||20150107072208|148.1'
         result = CommonResult(*decode_record(message[1:]))
-        mixin.save_to_db(header, [order], [result])
+        mixin.save_to_db(header, patient, order, [result])
         self.assertGreater(Panel.objects.filter(name='ALL').count(), 0)
         panel = Panel.objects.get(name='ALL')
         self.assertGreater(Order.objects.filter(panel=panel).count(), 0)
@@ -48,6 +50,8 @@ class TestGetresult(TestCase):
         mixin = DispatcherDbMixin()
         orders = []
         results = []
+        message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
+        header = Header(*decode_record(message[1:]))
         message = '2P|1|WT33721|||^||||||||||||||||||20150108072200|||||||||'
         patient = CommonPatient(*decode_record(message[1:]))
         message = '3O|1|WT33721||ALL|R|20150108072200|||||X||||1||||||||||F'
@@ -64,6 +68,8 @@ class TestGetresult(TestCase):
         results.append(CommonResult(*decode_record(message[1:])))
         message = '2R|7|^^^UREL^^^^148.1|3.188942|||N||F||^System||20150107072207|148.1'
         results.append(CommonResult(*decode_record(message[1:])))
+        self.assertIsNone(mixin.save_to_db(header, patient, order, results))
+
         message = '3P|2|WT36840|||^||||||||||||||||||20150108072200|||||||||'
         patient = CommonPatient(*decode_record(message[1:]))
         message = '4O|1|WT36840||ALL|R|20150108072200|||||X||||1||||||||||F'
@@ -86,3 +92,4 @@ class TestGetresult(TestCase):
         results.append(CommonResult(*decode_record(message[1:])))
         message = '5R|9|^^^UREL^^^^148.1|4.367106|||N||F||^System||20150107072212|148.1'
         results.append(CommonResult(*decode_record(message[1:])))
+        self.assertIsNone(mixin.save_to_db(header, patient, order, results))

@@ -14,7 +14,7 @@ class Dispatcher(DispatcherDbMixin, BaseRecordsDispatcher):
         self.records = {
             'H': Header(*values),
             'P': None,
-            'O': [],
+            'O': None,
             'R': [],
         }
 
@@ -29,16 +29,18 @@ class Dispatcher(DispatcherDbMixin, BaseRecordsDispatcher):
         }
 
     def on_order(self, values):
+        """Saves to db then resets R and O records for a new order."""
         if self.records['O']:
             self.save_to_db()
         self.records = {
             'H': self.records['H'],
             'P': self.records['P'],
-            'O': [CommonOrder(*values)],
+            'O': CommonOrder(*values),
             'R': [],
         }
 
     def on_result(self, values):
+        """Appends a result for the current order."""
         self.records['R'].append(CommonResult(*values))
 
     def on_comment(self, values):
@@ -47,3 +49,4 @@ class Dispatcher(DispatcherDbMixin, BaseRecordsDispatcher):
     def on_terminator(self, record):
         if self.records:
             self.save_to_db()
+        self.records = {}

@@ -13,22 +13,22 @@ class DispatcherDbMixin(object):
 
     records = {}
 
-    def save_to_db(self, header=None, orders=None, results=None):
+    def save_to_db(self, header=None, patient=None, order=None, results=None, comment=None):
         header_record = header or self.records['H']
-        order_records = orders or self.records['O']
+        patient_record = patient or self.records['P']
+        order_record = order or self.records['O']
         result_records = results or self.records['R']
         sender = self.sender(header_record.sender)
-        for order_record in order_records:
-            panel = self.panel(order_record.test)
-            order = self.order(order_record.sample_id, panel)
-            result = None
-            for result_record in result_records:
-                if not result:
-                    result = self.result(
-                        order, order_record.sample_id, order_record.sample_id, result_record.operator)
-                utestid = self.utestid(result_record.test, sender)
-                panel_item = self.panel_item(panel, utestid)
-                self.result_item(result, utestid, panel_item, result_record)
+        panel = self.panel(order_record.test)
+        order = self.order(order_record.sample_id, panel)
+        result = None
+        for result_record in result_records:
+            if not result:
+                result = self.result(
+                    order, order_record.sample_id, order_record.sample_id, result_record.operator)
+            utestid = self.utestid(result_record.test, sender)
+            panel_item = self.panel_item(panel, utestid)
+            self.result_item(result, utestid, panel_item, result_record)
 
     def sender(self, name):
         try:
