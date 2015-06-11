@@ -24,7 +24,7 @@ class Dispatcher(DispatcherDbMixin, BaseRecordsDispatcher):
         self.records = {
             'H': self.records['H'],
             'P': CommonPatient(*values),
-            'O': [],
+            'O': None,
             'R': [],
         }
 
