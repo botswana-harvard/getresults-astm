@@ -15,4 +15,5 @@ class UtestidMapping(models.Model):
         max_length=10)
 
     class Meta:
-        app_label = 'getresults'
+        app_label = 'getresults_astm'
+        db_table = 'getresults_utestidmapping'

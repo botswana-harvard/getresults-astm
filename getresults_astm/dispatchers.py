@@ -19,7 +19,7 @@ class Dispatcher(DispatcherDbMixin, BaseRecordsDispatcher):
         }
 
     def on_patient(self, values):
-        if self.records:
+        if self.records['P']:
             self.save_to_db()
         self.records = {
             'H': self.records['H'],
