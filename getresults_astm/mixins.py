@@ -62,8 +62,8 @@ class DispatcherDbMixin(object):
                         panel_item = self.panel_item(panel, utestid)
                         self.result_item(result, utestid, panel_item, result_record)
                     # add in missing utestid's
-                    utestid_names = [panel_item.utestid.name for panel_item in PanelItem.objects.filter(panel=panel)]
-                    result_utestid_names = [result_item.utestid.name for result_item in ResultItem.objects.filter(result=result)]
+                    utestid_names = [p.utestid.name for p in PanelItem.objects.filter(panel=panel)]
+                    result_utestid_names = [r.utestid.name for r in ResultItem.objects.filter(result=result)]
                     for name in utestid_names:
                         if name not in result_utestid_names:
                             utestid = Utestid.objects.get(name=name)
@@ -71,7 +71,7 @@ class DispatcherDbMixin(object):
                             self.result_item(result, utestid, panel_item, None)
         except AttributeError:
             raise
-        except Exception as e:
+        except Exception:
             # print(e)
             raise
 
