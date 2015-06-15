@@ -61,10 +61,18 @@ class DispatcherDbMixin(object):
                         utestid = self.utestid(result_record.test, sender)
                         panel_item = self.panel_item(panel, utestid)
                         self.result_item(result, utestid, panel_item, result_record)
+                    # add in missing utestid's
+                    utestid_names = [panel_item.utestid.name for panel_item in PanelItem.objects.filter(panel=panel)]
+                    result_utestid_names = [result_item.utestid.name for result_item in ResultItem.objects.filter(result=result)]
+                    for name in utestid_names:
+                        if name not in result_utestid_names:
+                            utestid = Utestid.objects.get(name=name)
+                            panel_item = self.panel_item(panel, utestid)
+                            self.result_item(result, utestid, panel_item, None)
         except AttributeError:
             raise
         except Exception as e:
-            print(e)
+            # print(e)
             raise
 
     def sender(self, sender_name, sender_description):
@@ -194,11 +202,13 @@ class DispatcherDbMixin(object):
         try:
             panel_item = PanelItem.objects.get(
                 panel=panel,
-                utestid=utestid)
+                utestid=utestid
+            )
         except PanelItem.DoesNotExist:
             panel_item = PanelItem.objects.create(
                 panel=panel,
-                utestid=utestid)
+                utestid=utestid
+            )
         return panel_item
 
     def result_item(self, result, utestid, panel_item, result_record):
@@ -211,9 +221,12 @@ class DispatcherDbMixin(object):
         result_item.result = result
         result_item.utestid = utestid
         result_item.specimen_identifier = result.specimen_identifier
-        result_item.status = result_record.status,
-        result_item.operator = result_record.operator
-        result_item.quantifier, result_item.value = panel_item.value_with_quantifier(result_record.value)
-        result_item.result_datetime = tz.localize(result_record.completed_at)
+        try:
+            result_item.status = result_record.status
+            result_item.operator = result_record.operator
+            result_item.quantifier, result_item.value = panel_item.value_with_quantifier(result_record.value)
+            result_item.result_datetime = tz.localize(result_record.completed_at)
+        except AttributeError:
+            pass
         result_item.save()
         return result_item

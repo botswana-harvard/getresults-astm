@@ -1,25 +1,25 @@
 import pytz
-from uuid import uuid4
 
 from dateutil.parser import parse
+from uuid import uuid4
+
 from django.conf import settings
 from django.test import TestCase
+from django.utils import timezone
 
 from astm import codec
 from astm.constants import ENCODING
 
-from getresults_receive.models import Patient, Receive
 from getresults.models import Result, ResultItem, Panel, PanelItem, Utestid, Order
-
+from getresults_aliquot.models import Aliquot, AliquotType
+from getresults_receive.models import Patient, Receive
 from getresults.utils import (
     load_panel_items_from_csv, load_utestids_from_csv, load_panels_from_csv
 )
 
 from ..mixins import DispatcherDbMixin
+from ..models import Sender, UtestidMapping
 from ..records import CommonOrder, CommonResult, CommonPatient, Header
-from getresults_aliquot.models.aliquot import Aliquot
-from django.utils import timezone
-from getresults_aliquot.models.aliquot_type import AliquotType
 
 tz = pytz.timezone(settings.TIME_ZONE)
 
@@ -277,7 +277,7 @@ class TestGetresult(TestCase):
         panel = Panel.objects.create(name='chem')
         new_order = Order.objects.create(
             order_identifier='WT33721',
-            order_datetime=parse('20150108072200'),
+            order_datetime=tz.localize(parse('20150108072200')),
             panel=panel,
             aliquot=aliquot)
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
@@ -299,3 +299,158 @@ class TestGetresult(TestCase):
         self.assertNotEqual(new_order.panel.name, order_record.test)
 
     def test_adds_unresulted_utestid_from_panel(self):
+        Panel.objects.all().delete()
+        UtestidMapping.objects.all().delete()
+        Utestid.objects.all().delete()
+        message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
+        header = Header(*decode_record(message[1:]))
+        message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
+        patient = CommonPatient(*decode_record(message[1:]))
+        message = '3O|1|NEWORDER||CHEM|R|20150108072200|||||X||||1||||||||||F'
+        order_record = CommonOrder(*decode_record(message[1:]))
+        sender = Sender.objects.create(name='PSM', description='PSM,Roche Diagnostics,PSM,2.01.00.c')
+        panel = Panel.objects.create(name='CHEM')
+        self.create_panel_items(panel, sender)
+        records = {
+            'H': header,
+            'P': patient,
+            'O': order_record,
+            'R': self.result_records}
+        patient = Patient.objects.create(
+            patient_identifier='123456789',
+            registration_datetime=timezone.now())
+        receive = Receive.objects.create(
+            receive_identifier=uuid4(),
+            patient=patient,
+            receive_datetime=timezone.now(),
+        )
+        aliquot_type = AliquotType.objects.create(alpha_code='WB', numeric_code='02')
+        aliquot = Aliquot.objects.create(
+            aliquot_identifier='123456789',
+            receive=receive,
+            aliquot_type=aliquot_type)
+        order = Order.objects.create(
+            order_identifier='NEWORDER',
+            order_datetime=timezone.now(),
+            panel=panel,
+            aliquot=aliquot)
+        DispatcherDbMixin.create_dummy_records = None
+        mixin = DispatcherDbMixin()
+        mixin.save_to_db(records)
+        result = Result.objects.get(order=order)
+        self.assertEquals(ResultItem.objects.filter(result=result).count(), 9)
+
+    @property
+    def result_records(self):
+        result_record = []
+        message = '5R|1|^^^ALPL^^^^148.1|67.95654|||N||F||^System||20150107072213|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '6R|2|^^^ALTL^^^^148.1|10.55941|||N||F||^System||20150107072212|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '7R|3|^^^CL-I^^^^148.1|106.7179|||N||F||^System||20150107072211|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '0R|4|^^^CO2-L^^^^148.1|20.16562|||N||F||^System||20150107072211|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '1R|5|^^^CREJ^^^^148.1|56.58432|||N||F||^System||20150107072214|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '2R|6|^^^K-I^^^^148.1|4.395318|||N||F||^System||20150107072210|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '3R|7|^^^NA-I^^^^148.1|136.6808|||N||F||^System||20150107072209|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '4R|8|^^^PHOS^^^^148.1|1.356225|||N||F||^System||20150107072213|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '5R|9|^^^UREL^^^^148.1|4.367106|||N||F||^System||20150107072212|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        return result_record
+
+    def create_panel_items(self, panel, sender):
+        utestid = Utestid.objects.create(
+            name='ALPL', description='ALPL', value_type='absolute', value_datatype='decimal', precision=2)
+        UtestidMapping.objects.create(
+            sender=sender,
+            utestid=utestid,
+            utestid_name='ALPL')
+        PanelItem.objects.create(
+            panel=panel,
+            utestid=utestid
+        )
+        utestid = Utestid.objects.create(
+            name='ALTL', description='ALTL', value_type='absolute', value_datatype='decimal', precision=2)
+        UtestidMapping.objects.create(
+            sender=sender,
+            utestid=utestid,
+            utestid_name='ALTL')
+        PanelItem.objects.create(
+            panel=panel,
+            utestid=utestid,
+        )
+        utestid = Utestid.objects.create(
+            name='CL-I', description='CL-I', value_type='absolute', value_datatype='decimal', precision=2)
+        UtestidMapping.objects.create(
+            sender=sender,
+            utestid=utestid,
+            utestid_name='CL-I')
+        PanelItem.objects.create(
+            panel=panel,
+            utestid=utestid,
+        )
+        utestid = Utestid.objects.create(
+            name='CO2-L', description='CO2-L', value_type='absolute', value_datatype='decimal', precision=2)
+        UtestidMapping.objects.create(
+            sender=sender,
+            utestid=utestid,
+            utestid_name='CO2-L')
+        PanelItem.objects.create(
+            panel=panel,
+            utestid=utestid,
+        )
+        utestid = Utestid.objects.create(
+            name='CREJ', description='CREJ', value_type='absolute', value_datatype='decimal', precision=2)
+        UtestidMapping.objects.create(
+            sender=sender,
+            utestid=utestid,
+            utestid_name='CREJ')
+        PanelItem.objects.create(
+            panel=panel,
+            utestid=utestid,
+        )
+        utestid = Utestid.objects.create(
+            name='K-I', description='K-I', value_type='absolute', value_datatype='decimal', precision=2)
+        UtestidMapping.objects.create(
+            sender=sender,
+            utestid=utestid,
+            utestid_name='K-I')
+        PanelItem.objects.create(
+            panel=panel,
+            utestid=utestid,
+        )
+        utestid = Utestid.objects.create(
+            name='NA-I', description='NA-I', value_type='absolute', value_datatype='decimal', precision=2)
+        UtestidMapping.objects.create(
+            sender=sender,
+            utestid=utestid,
+            utestid_name='NA-I')
+        PanelItem.objects.create(
+            panel=panel,
+            utestid=utestid,
+        )
+        utestid = Utestid.objects.create(
+            name='PHOS', description='PHOS', value_type='absolute', value_datatype='decimal', precision=2)
+        UtestidMapping.objects.create(
+            sender=sender,
+            utestid=utestid,
+            utestid_name='PHOS')
+        PanelItem.objects.create(
+            panel=panel,
+            utestid=utestid
+        )
+        utestid = Utestid.objects.create(
+            name='UREL', description='UREL', value_type='absolute', value_datatype='decimal', precision=2)
+        UtestidMapping.objects.create(
+            sender=sender,
+            utestid=utestid,
+            utestid_name='UREL')
+        PanelItem.objects.create(
+            panel=panel,
+            utestid=utestid,
+        )
