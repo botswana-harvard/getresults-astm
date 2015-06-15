@@ -12,6 +12,11 @@ sends 'ALL')
 
 We expect the order identifier to be in the output and matched to an existing order in the database.
 
+Missing data items, such as UTESTID's, can be created on the fly to avoid disruption in data flow. However creating
+fake orders, aliquots, receive records and patient records is not ideal.
+
+Unless the dispatcher class attribute create_dummy_data=True, missing data items in the receiving database will cause an exception.
+
 Run the server
 
     # host = '192.168.1.1'
