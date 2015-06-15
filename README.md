@@ -6,3 +6,14 @@
 
 ASTM interface for getresults using python-astm.
 
+The sample message in the testdata folder is output from Roche PSM. The python-astm records are subclasses to accept
+data from PSM, which is rather incomplete in our implementation. For example, PSM does not report the panel to us (just
+sends 'ALL')
+
+We expect the order identifier to be in the output and matched to an existing order in the database.
+
+Run the server
+
+    # host = '192.168.1.1'
+    # port = 20851
+    python manage.py astm_server '192.168.1.1' 20851
