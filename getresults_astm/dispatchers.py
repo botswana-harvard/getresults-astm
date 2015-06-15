@@ -7,6 +7,8 @@ from .mixins import DispatcherDbMixin
 
 class Dispatcher(DispatcherDbMixin, BaseRecordsDispatcher):
 
+    records = {}
+
     def __init__(self, encoding=None):
         super(Dispatcher, self).__init__(encoding)
 
@@ -20,7 +22,7 @@ class Dispatcher(DispatcherDbMixin, BaseRecordsDispatcher):
 
     def on_patient(self, values):
         if self.records['P']:
-            self.save_to_db()
+            self.save_to_db(self.records)
         self.records = {
             'H': self.records['H'],
             'P': CommonPatient(*values),
@@ -31,7 +33,7 @@ class Dispatcher(DispatcherDbMixin, BaseRecordsDispatcher):
     def on_order(self, values):
         """Saves to db then resets R and O records for a new order."""
         if self.records['O']:
-            self.save_to_db()
+            self.save_to_db(self.records)
         self.records = {
             'H': self.records['H'],
             'P': self.records['P'],
@@ -48,5 +50,5 @@ class Dispatcher(DispatcherDbMixin, BaseRecordsDispatcher):
 
     def on_terminator(self, record):
         if self.records:
-            self.save_to_db()
+            self.save_to_db(self.records)
         self.records = {}

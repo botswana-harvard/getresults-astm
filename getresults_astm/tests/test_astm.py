@@ -1,8 +1,14 @@
+import pytz
+from uuid import uuid4
+
+from dateutil.parser import parse
+from django.conf import settings
 from django.test import TestCase
 
 from astm import codec
 from astm.constants import ENCODING
 
+from getresults_receive.models import Patient, Receive
 from getresults.models import Result, ResultItem, Panel, PanelItem, Utestid, Order
 
 from getresults.utils import (
@@ -11,6 +17,11 @@ from getresults.utils import (
 
 from ..mixins import DispatcherDbMixin
 from ..records import CommonOrder, CommonResult, CommonPatient, Header
+from getresults_aliquot.models.aliquot import Aliquot
+from django.utils import timezone
+from getresults_aliquot.models.aliquot_type import AliquotType
+
+tz = pytz.timezone(settings.TIME_ZONE)
 
 
 def decode_record(r):
@@ -26,6 +37,7 @@ class TestGetresult(TestCase):
         load_panel_items_from_csv()
 
     def test_mixin_db_update_single(self):
+        DispatcherDbMixin.create_dummy_records = True
         mixin = DispatcherDbMixin()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
@@ -35,7 +47,12 @@ class TestGetresult(TestCase):
         order = CommonOrder(*decode_record(message[1:]))
         message = '4R|1|^^^ALPL^^^^148.1|44.42893|||N||F||^System||20150107072208|148.1'
         result = CommonResult(*decode_record(message[1:]))
-        mixin.save_to_db(header, patient, order, [result])
+        records = {
+            'H': header,
+            'P': patient,
+            'O': order,
+            'R': [result]}
+        mixin.save_to_db(records)
         self.assertGreater(Panel.objects.filter(name='ALL').count(), 0)
         panel = Panel.objects.get(name='ALL')
         self.assertGreater(Order.objects.filter(panel=panel).count(), 0)
@@ -47,8 +64,8 @@ class TestGetresult(TestCase):
         self.assertGreater(ResultItem.objects.filter(value='44.42893').count(), 0)
 
     def test_mixin_db_update_multi(self):
+        DispatcherDbMixin.create_dummy_records = True
         mixin = DispatcherDbMixin()
-        orders = []
         results = []
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
@@ -68,7 +85,12 @@ class TestGetresult(TestCase):
         results.append(CommonResult(*decode_record(message[1:])))
         message = '2R|7|^^^UREL^^^^148.1|3.188942|||N||F||^System||20150107072207|148.1'
         results.append(CommonResult(*decode_record(message[1:])))
-        self.assertIsNone(mixin.save_to_db(header, patient, order, results))
+        records = {
+            'H': header,
+            'P': patient,
+            'O': order,
+            'R': results}
+        self.assertIsNone(mixin.save_to_db(records))
 
         message = '3P|2|WT36840|||^||||||||||||||||||20150108072200|||||||||'
         patient = CommonPatient(*decode_record(message[1:]))
@@ -92,4 +114,188 @@ class TestGetresult(TestCase):
         results.append(CommonResult(*decode_record(message[1:])))
         message = '5R|9|^^^UREL^^^^148.1|4.367106|||N||F||^System||20150107072212|148.1'
         results.append(CommonResult(*decode_record(message[1:])))
-        self.assertIsNone(mixin.save_to_db(header, patient, order, results))
+        records = {
+            'H': header,
+            'P': patient,
+            'O': order,
+            'R': results}
+        self.assertIsNone(mixin.save_to_db(records))
+
+    def test_no_header1(self):
+        DispatcherDbMixin.create_dummy_records = True
+        mixin = DispatcherDbMixin()
+        records = {
+            'H': None,
+            'P': None,
+            'O': None,
+            'R': []}
+        self.assertRaises(AttributeError, mixin.save_to_db, records)
+
+    def test_no_header2(self):
+        DispatcherDbMixin.create_dummy_records = True
+        mixin = DispatcherDbMixin()
+        message = '3P|2|WT36840|||^||||||||||||||||||20150108072200|||||||||'
+        patient = CommonPatient(*decode_record(message[1:]))
+        records = {
+            'H': None,
+            'P': patient,
+            'O': None,
+            'R': []}
+        self.assertRaises(AttributeError, mixin.save_to_db, records)
+
+    def test_patient_as_list(self):
+        DispatcherDbMixin.create_dummy_records = True
+        mixin = DispatcherDbMixin()
+        message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
+        header = Header(*decode_record(message[1:]))
+        message = '3P|2|WT36840|||^||||||||||||||||||20150108072200|||||||||'
+        patient = CommonPatient(*decode_record(message[1:]))
+        records = {
+            'H': header,
+            'P': [patient],
+            'O': None,
+            'R': []}
+        self.assertRaises(AttributeError, mixin.save_to_db, records)
+
+    def test_patient(self):
+        DispatcherDbMixin.create_dummy_records = True
+        mixin = DispatcherDbMixin()
+        message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
+        header = Header(*decode_record(message[1:]))
+        message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
+        patient_record = CommonPatient(*decode_record(message[1:]))
+        records = {
+            'H': header,
+            'P': patient_record,
+            'O': None,
+            'R': []}
+        mixin.save_to_db(records)
+        patient = Patient.objects.get(patient_identifier=patient_record.practice_id)
+        self.assertEqual(patient.registration_datetime, tz.localize(patient_record.admission_date))
+        self.assertEqual(patient.dob, patient_record.birthdate.date())
+        self.assertEqual(patient.gender, patient_record.sex)
+
+    def test_order_save(self):
+        DispatcherDbMixin.create_dummy_records = True
+        mixin = DispatcherDbMixin()
+        message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
+        header = Header(*decode_record(message[1:]))
+        message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
+        patient = CommonPatient(*decode_record(message[1:]))
+        message = '3O|1|WT33721||ALL|R|20150108072200|||||X||||1||||||||||F'
+        order_record = CommonOrder(*decode_record(message[1:]))
+        records = {
+            'H': header,
+            'P': patient,
+            'O': order_record,
+            'R': []}
+        mixin.save_to_db(records)
+        order = Order.objects.get(order_identifier=order_record.sample_id)
+        self.assertEqual(order.order_datetime, tz.localize(order_record.created_at))
+        self.assertEqual(order.panel.name, order_record.test)
+        self.assertEqual(order.action_code, order_record.action_code)
+        self.assertEqual(order.report_type, order_record.report_type)
+
+    def test_result_save(self):
+        DispatcherDbMixin.create_dummy_records = True
+        mixin = DispatcherDbMixin()
+        message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
+        header = Header(*decode_record(message[1:]))
+        message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
+        patient = CommonPatient(*decode_record(message[1:]))
+        message = '3O|1|WT33721||ALL|R|20150108072200|||||X||||1||||||||||F'
+        order_record = CommonOrder(*decode_record(message[1:]))
+        result_record = []
+        message = '4R|1|^^^ALPL^^^^148.1|44.42893|||N||F||^System||20150107072208|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '5R|1|^^^ALPL^^^^148.1|67.95654|||N||F||^System||20150107072213|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '6R|2|^^^ALTL^^^^148.1|10.55941|||N||F||^System||20150107072212|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '7R|3|^^^CL-I^^^^148.1|106.7179|||N||F||^System||20150107072211|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '0R|4|^^^CO2-L^^^^148.1|20.16562|||N||F||^System||20150107072211|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '1R|5|^^^CREJ^^^^148.1|56.58432|||N||F||^System||20150107072214|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '2R|6|^^^K-I^^^^148.1|4.395318|||N||F||^System||20150107072210|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '3R|7|^^^NA-I^^^^148.1|136.6808|||N||F||^System||20150107072209|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '4R|8|^^^PHOS^^^^148.1|1.356225|||N||F||^System||20150107072213|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        message = '5R|9|^^^UREL^^^^148.1|4.367106|||N||F||^System||20150107072212|148.1'
+        result_record.append(CommonResult(*decode_record(message[1:])))
+        records = {
+            'H': header,
+            'P': patient,
+            'O': order_record,
+            'R': result_record}
+        mixin.save_to_db(records)
+        order = Order.objects.get(order_identifier=order_record.sample_id)
+        result_record = result_record[0]
+        result = Result.objects.get(order=order)
+#         self.assertEqual(result.collection_datetime, tz.localize(order_record.created_at))
+        self.assertEqual(result.operator, result_record.operator.name)
+        self.assertEqual(result.status, result_record.status)
+        self.assertEqual(result.analyzer_name, result_record.instrument)
+
+    def test_no_create_dummy(self):
+        DispatcherDbMixin.create_dummy_records = False
+        mixin = DispatcherDbMixin()
+        message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
+        header = Header(*decode_record(message[1:]))
+        message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
+        patient = CommonPatient(*decode_record(message[1:]))
+        message = '3O|1|WT33721||ALL|R|20150108072200|||||X||||1||||||||||F'
+        order_record = CommonOrder(*decode_record(message[1:]))
+        message = '5R|9|^^^UREL^^^^148.1|4.367106|||N||F||^System||20150107072212|148.1'
+        result_record = CommonResult(*decode_record(message[1:]))
+        records = {
+            'H': header,
+            'P': patient,
+            'O': order_record,
+            'R': [result_record]}
+        self.assertRaises(ValueError, mixin.save_to_db, records)
+
+    def test_find_existing_order(self):
+        DispatcherDbMixin.create_dummy_records = True
+        mixin = DispatcherDbMixin()
+        patient = Patient.objects.create(
+            patient_identifier='123456789',
+            registration_datetime=timezone.now())
+        receive = Receive.objects.create(
+            receive_identifier=uuid4(),
+            patient=patient,
+            receive_datetime=timezone.now(),
+        )
+        aliquot_type = AliquotType.objects.create(alpha_code='WB', numeric_code='02')
+        aliquot = Aliquot.objects.create(
+            aliquot_identifier='123456789',
+            receive=receive,
+            aliquot_type=aliquot_type)
+        panel = Panel.objects.create(name='chem')
+        new_order = Order.objects.create(
+            order_identifier='WT33721',
+            order_datetime=parse('20150108072200'),
+            panel=panel,
+            aliquot=aliquot)
+        message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
+        header = Header(*decode_record(message[1:]))
+        message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
+        patient = CommonPatient(*decode_record(message[1:]))
+        message = '3O|1|WT33721||ALL|R|20150108072200|||||X||||1||||||||||F'
+        order_record = CommonOrder(*decode_record(message[1:]))
+        message = '5R|9|^^^UREL^^^^148.1|4.367106|||N||F||^System||20150107072212|148.1'
+        result_record = CommonResult(*decode_record(message[1:]))
+        records = {
+            'H': header,
+            'P': patient,
+            'O': order_record,
+            'R': [result_record]}
+        mixin.save_to_db(records)
+        result = ResultItem.objects.get(value='4.367106').result
+        self.assertEquals(new_order.order_identifier, result.order.order_identifier)
+        self.assertNotEqual(new_order.panel.name, order_record.test)
+
+    def test_adds_unresulted_utestid_from_panel(self):

@@ -1,4 +1,5 @@
 import pytz
+
 from uuid import uuid4
 
 from django.conf import settings
@@ -13,50 +14,80 @@ from .models import Sender, UtestidMapping
 tz = pytz.timezone(settings.TIME_ZONE)
 
 
+class HeaderError(Exception):
+    pass
+
+
 class DispatcherDbMixin(object):
 
-    records = {}
+    create_dummy_records = None  # if True create dummy patient, receive, aliquot and order
 
-    def save_to_db(self, header=None, patient=None, order=None, results=None, comment=None):
+    def save_to_db(self, records):
         try:
-            header_record = header or self.records['H']
-            patient_record = patient or self.records['P']
-            order_record = order or self.records['O']
-            result_records = results or self.records['R']
-            sender = self.sender(header_record)
-            patient = self.patient(patient_record.practice_id)
-            panel = self.panel(order_record.test)
-            order = self.order(order_record.sample_id, panel, patient)
-            result = None
-            for result_record in result_records:
-                if not result:
-                    result = self.result(
-                        order, order_record.sample_id, order_record.sample_id,
-                        result_record.operator, result_record.status)
-                utestid = self.utestid(result_record.test, sender)
-                panel_item = self.panel_item(panel, utestid)
-                self.result_item(result, utestid, panel_item, result_record)
+            header_record = records['H']
+            sender = self.sender(
+                header_record.sender.name,
+                ', '.join([s for s in header_record.sender])
+            )
+            patient_record = records['P']
+            patient = self.patient(
+                patient_record.practice_id,
+                gender=patient_record.sex,
+                dob=patient_record.birthdate,
+                registration_datetime=patient_record.admission_date,
+            )
+            if records['O']:
+                order_record = records['O']
+                panel = self.panel(order_record.test)
+                order = self.order(
+                    order_record.sample_id,
+                    order_record.created_at,
+                    order_record.action_code,
+                    order_record.report_type,
+                    panel,
+                    patient)
+                if records['R']:
+                    result_records = records['R']
+                    result = None
+                    for result_record in result_records:
+                        if not result:
+                            result = self.result(
+                                order,
+                                order_record.sample_id,
+                                result_record.operator.name,
+                                result_record.status,
+                                result_record.instrument,
+                            )
+                        utestid = self.utestid(result_record.test, sender)
+                        panel_item = self.panel_item(panel, utestid)
+                        self.result_item(result, utestid, panel_item, result_record)
+        except AttributeError:
+            raise
         except Exception as e:
             print(e)
             raise
 
-    def sender(self, header_record):
+    def sender(self, sender_name, sender_description):
         try:
-            sender = Sender.objects.get(name=header_record.sender.name)
+            sender = Sender.objects.get(name=sender_name)
         except Sender.DoesNotExist:
             sender = Sender.objects.create(
-                name=header_record.sender.name,
-                description=', '.join([s for s in header_record.sender]))
+                name=sender_name,
+                description=sender_description)
         return sender
 
-    def patient(self, patient_identifier):
+    def patient(self, patient_identifier, gender, dob, registration_datetime):
         try:
             patient = Patient.objects.get(patient_identifier=patient_identifier)
         except Patient.DoesNotExist:
-            patient = Patient.objects.create(
-                patient_identifier=patient_identifier,
-                registration_datetime=timezone.now(),
-            )
+            patient = None
+            if self.create_dummy_records:
+                patient = Patient.objects.create(
+                    patient_identifier=patient_identifier,
+                    gender=gender,
+                    registration_datetime=tz.localize(registration_datetime),
+                    dob=dob,
+                )
         return patient
 
     def panel(self, name):
@@ -66,19 +97,24 @@ class DispatcherDbMixin(object):
             panel = Panel.objects.create(name=name)
         return panel
 
-    def order(self, order_identifier, panel, patient):
+    def order(self, order_identifier, order_datetime, action_code, report_type, panel, patient):
         try:
             order = Order.objects.get(order_identifier=order_identifier)
         except Order.DoesNotExist:
-            aliquot = self.aliquot(patient)
-            order = Order.objects.create(
-                order_identifier=order_identifier,
-                specimen_identifier=order_identifier,
-                panel=panel,
-                aliquot=aliquot)
+            order = None
+            if self.create_dummy_records:
+                aliquot = self.aliquot(patient, None)
+                order = Order.objects.create(
+                    order_identifier=order_identifier,
+                    order_datetime=tz.localize(order_datetime),
+                    specimen_identifier=order_identifier,
+                    action_code=action_code,
+                    report_type=report_type,
+                    panel=panel,
+                    aliquot=aliquot)
         return order
 
-    def aliquot(self, patient):
+    def aliquot(self, patient, order_identifier):
         """Creates a fake aliquot."""
         try:
             aliquot_type = AliquotType.objects.get(name='unknown')
@@ -88,32 +124,50 @@ class DispatcherDbMixin(object):
             aliquot_condition = AliquotCondition.objects.get(name='unknown')
         except AliquotCondition.DoesNotExist:
             aliquot_condition = AliquotCondition.objects.create(name='unknown', description='unknown')
-        aliquot = Aliquot.objects.create(
-            aliquot_identifier=uuid4(),
-            aliquot_type=aliquot_type,
-            aliquot_condition=aliquot_condition,
-            receive=self.receive(patient))
+        try:
+            aliquot = Order.objects.get(
+                order_identifier=order_identifier
+            ).aliquot
+        except Order.DoesNotExist:
+            aliquot = None
+            if self.create_dummy_records:
+                aliquot_identifier = uuid4()
+                receive = self.receive(patient, aliquot_identifier)
+                aliquot = Aliquot.objects.create(
+                    aliquot_identifier=aliquot_identifier,
+                    aliquot_type=aliquot_type,
+                    aliquot_condition=aliquot_condition,
+                    receive=receive)
         return aliquot
 
-    def receive(self, patient):
+    def receive(self, patient, aliquot_identifier):
         """Creates a fake receive record."""
-        receive = Receive.objects.create(
-            receive_identifier=uuid4(),
-            receive_datetime=timezone.now(),
-            patient=patient
-        )
+        try:
+            Receive.objects.get(
+                patient=patient,
+                receive_identifier=aliquot_identifier,
+            )
+        except Receive.DoesNotExist:
+            receive = None
+            if self.create_dummy_records:
+                receive = Receive.objects.create(
+                    receive_identifier=uuid4(),
+                    receive_datetime=timezone.now(),
+                    patient=patient
+                )
         return receive
 
-    def result(self, order, result_identifier, specimen_identifier, operator, status):
+    def result(self, order, specimen_identifier, operator, status, instrument):
         try:
             result = Result.objects.get(order=order)
         except Result.DoesNotExist:
             result = Result.objects.create(
                 order=order,
-                result_identifier=result_identifier,
+                result_identifier=uuid4(),
                 specimen_identifier=specimen_identifier,
                 status=status,
                 operator=operator,
+                analyzer_name=instrument
             )
         return result
 

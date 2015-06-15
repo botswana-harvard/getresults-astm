@@ -5,6 +5,7 @@ __pycache__/
 .pydevproject
 .settings
 db.sqlite3
+getresults_astm/db.sqlite3
 # C extensions
 *.so
 
