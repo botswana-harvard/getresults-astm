@@ -10,15 +10,14 @@ from django.utils import timezone
 from astm import codec
 from astm.constants import ENCODING
 
-from getresults.models import Result, ResultItem, Panel, PanelItem, Utestid, Order
+from getresults.models import Result, ResultItem, Panel, PanelItem, Utestid, Order, Sender, UtestidMapping
 from getresults_aliquot.models import Aliquot, AliquotType
 from getresults_receive.models import Patient, Receive
 from getresults.utils import (
     load_panel_items_from_csv, load_utestids_from_csv, load_panels_from_csv
 )
 
-from ..mixins import GetResultsDispatcherMixin
-from ..models import Sender, UtestidMapping
+from ..dispatchers import GetResultsDispatcher
 from ..records import CommonOrder, CommonResult, CommonPatient, Header
 
 tz = pytz.timezone(settings.TIME_ZONE)
@@ -36,9 +35,9 @@ class TestGetresult(TestCase):
         load_utestids_from_csv()
         load_panel_items_from_csv()
 
-    def test_mixin_db_update_single(self):
-        GetResultsDispatcherMixin.create_dummy_records = True
-        mixin = GetResultsDispatcherMixin()
+    def test_dispatcher_db_update_single(self):
+        GetResultsDispatcher.create_dummy_records = True
+        dispatcher = GetResultsDispatcher()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
         message = '2P|1|WT33721|||^||||||||||||||||||20150108072200|||||||||'
@@ -52,7 +51,7 @@ class TestGetresult(TestCase):
             'P': patient,
             'O': order,
             'R': [result]}
-        mixin.save_to_db(records)
+        dispatcher.save_to_db(records)
         self.assertGreater(Panel.objects.filter(name='ALL').count(), 0)
         panel = Panel.objects.get(name='ALL')
         self.assertGreater(Order.objects.filter(panel=panel).count(), 0)
@@ -63,9 +62,9 @@ class TestGetresult(TestCase):
         self.assertGreater(Result.objects.filter(order__order_identifier='WT33721').count(), 0)
         self.assertGreater(ResultItem.objects.filter(value='44.42893').count(), 0)
 
-    def test_mixin_db_update_multi(self):
-        GetResultsDispatcherMixin.create_dummy_records = True
-        mixin = GetResultsDispatcherMixin()
+    def test_dispatcher_db_update_multi(self):
+        GetResultsDispatcher.create_dummy_records = True
+        dispatcher = GetResultsDispatcher()
         results = []
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
@@ -90,7 +89,7 @@ class TestGetresult(TestCase):
             'P': patient,
             'O': order,
             'R': results}
-        self.assertIsNone(mixin.save_to_db(records))
+        self.assertIsNone(dispatcher.save_to_db(records))
 
         message = '3P|2|WT36840|||^||||||||||||||||||20150108072200|||||||||'
         patient = CommonPatient(*decode_record(message[1:]))
@@ -119,21 +118,21 @@ class TestGetresult(TestCase):
             'P': patient,
             'O': order,
             'R': results}
-        self.assertIsNone(mixin.save_to_db(records))
+        self.assertIsNone(dispatcher.save_to_db(records))
 
     def test_no_header1(self):
-        GetResultsDispatcherMixin.create_dummy_records = True
-        mixin = GetResultsDispatcherMixin()
+        GetResultsDispatcher.create_dummy_records = True
+        dispatcher = GetResultsDispatcher()
         records = {
             'H': None,
             'P': None,
             'O': None,
             'R': []}
-        self.assertRaises(AttributeError, mixin.save_to_db, records)
+        self.assertRaises(AttributeError, dispatcher.save_to_db, records)
 
     def test_no_header2(self):
-        GetResultsDispatcherMixin.create_dummy_records = True
-        mixin = GetResultsDispatcherMixin()
+        GetResultsDispatcher.create_dummy_records = True
+        dispatcher = GetResultsDispatcher()
         message = '3P|2|WT36840|||^||||||||||||||||||20150108072200|||||||||'
         patient = CommonPatient(*decode_record(message[1:]))
         records = {
@@ -141,11 +140,11 @@ class TestGetresult(TestCase):
             'P': patient,
             'O': None,
             'R': []}
-        self.assertRaises(AttributeError, mixin.save_to_db, records)
+        self.assertRaises(AttributeError, dispatcher.save_to_db, records)
 
     def test_patient_as_list(self):
-        GetResultsDispatcherMixin.create_dummy_records = True
-        mixin = GetResultsDispatcherMixin()
+        GetResultsDispatcher.create_dummy_records = True
+        dispatcher = GetResultsDispatcher()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
         message = '3P|2|WT36840|||^||||||||||||||||||20150108072200|||||||||'
@@ -155,11 +154,11 @@ class TestGetresult(TestCase):
             'P': [patient],
             'O': None,
             'R': []}
-        self.assertRaises(AttributeError, mixin.save_to_db, records)
+        self.assertRaises(AttributeError, dispatcher.save_to_db, records)
 
     def test_patient(self):
-        GetResultsDispatcherMixin.create_dummy_records = True
-        mixin = GetResultsDispatcherMixin()
+        GetResultsDispatcher.create_dummy_records = True
+        dispatcher = GetResultsDispatcher()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
         message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
@@ -169,15 +168,15 @@ class TestGetresult(TestCase):
             'P': patient_record,
             'O': None,
             'R': []}
-        mixin.save_to_db(records)
+        dispatcher.save_to_db(records)
         patient = Patient.objects.get(patient_identifier=patient_record.practice_id)
         self.assertEqual(patient.registration_datetime, tz.localize(patient_record.admission_date))
         self.assertEqual(patient.dob, patient_record.birthdate.date())
         self.assertEqual(patient.gender, patient_record.sex)
 
     def test_order_save(self):
-        GetResultsDispatcherMixin.create_dummy_records = True
-        mixin = GetResultsDispatcherMixin()
+        GetResultsDispatcher.create_dummy_records = True
+        dispatcher = GetResultsDispatcher()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
         message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
@@ -189,7 +188,7 @@ class TestGetresult(TestCase):
             'P': patient,
             'O': order_record,
             'R': []}
-        mixin.save_to_db(records)
+        dispatcher.save_to_db(records)
         order = Order.objects.get(order_identifier=order_record.sample_id)
         self.assertEqual(order.order_datetime, tz.localize(order_record.created_at))
         self.assertEqual(order.panel.name, order_record.test)
@@ -197,8 +196,8 @@ class TestGetresult(TestCase):
         self.assertEqual(order.report_type, order_record.report_type)
 
     def test_result_save(self):
-        GetResultsDispatcherMixin.create_dummy_records = True
-        mixin = GetResultsDispatcherMixin()
+        GetResultsDispatcher.create_dummy_records = True
+        dispatcher = GetResultsDispatcher()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
         message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
@@ -231,7 +230,7 @@ class TestGetresult(TestCase):
             'P': patient,
             'O': order_record,
             'R': result_record}
-        mixin.save_to_db(records)
+        dispatcher.save_to_db(records)
         order = Order.objects.get(order_identifier=order_record.sample_id)
         result_record = result_record[0]
         result = Result.objects.get(order=order)
@@ -241,8 +240,8 @@ class TestGetresult(TestCase):
         self.assertEqual(result.analyzer_name, result_record.instrument)
 
     def test_no_create_dummy(self):
-        GetResultsDispatcherMixin.create_dummy_records = False
-        mixin = GetResultsDispatcherMixin()
+        GetResultsDispatcher.create_dummy_records = False
+        dispatcher = GetResultsDispatcher()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
         message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
@@ -256,11 +255,11 @@ class TestGetresult(TestCase):
             'P': patient,
             'O': order_record,
             'R': [result_record]}
-        self.assertRaises(ValueError, mixin.save_to_db, records)
+        self.assertRaises(ValueError, dispatcher.save_to_db, records)
 
     def test_find_existing_order(self):
-        GetResultsDispatcherMixin.create_dummy_records = True
-        mixin = GetResultsDispatcherMixin()
+        GetResultsDispatcher.create_dummy_records = True
+        dispatcher = GetResultsDispatcher()
         patient = Patient.objects.create(
             patient_identifier='123456789',
             registration_datetime=timezone.now())
@@ -293,7 +292,7 @@ class TestGetresult(TestCase):
             'P': patient,
             'O': order_record,
             'R': [result_record]}
-        mixin.save_to_db(records)
+        dispatcher.save_to_db(records)
         result = ResultItem.objects.get(value='4.367106').result
         self.assertEquals(new_order.order_identifier, result.order.order_identifier)
         self.assertNotEqual(new_order.panel.name, order_record.test)
@@ -334,9 +333,9 @@ class TestGetresult(TestCase):
             order_datetime=timezone.now(),
             panel=panel,
             aliquot=aliquot)
-        GetResultsDispatcherMixin.create_dummy_records = None
-        mixin = GetResultsDispatcherMixin()
-        mixin.save_to_db(records)
+        GetResultsDispatcher.create_dummy_records = None
+        dispatcher = GetResultsDispatcher()
+        dispatcher.save_to_db(records)
         result = Result.objects.get(order=order)
         self.assertEquals(ResultItem.objects.filter(result=result).count(), 9)
 
