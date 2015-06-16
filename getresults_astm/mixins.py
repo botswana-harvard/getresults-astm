@@ -230,7 +230,7 @@ class GetResultsDispatcherMixin(BaseDispatcherMixin):
         try:
             result_item.status = result_record.status
             result_item.operator = result_record.operator
-            result_item.quantifier, result_item.value = panel_item.value_with_quantifier(result_record.value)
+            result_item.quantifier, result_item.value = panel_item.utestid.value_with_quantifier(result_record.value)
             result_item.result_datetime = tz.localize(result_record.completed_at)
         except AttributeError:
             pass
