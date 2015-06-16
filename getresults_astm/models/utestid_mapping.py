@@ -11,8 +11,11 @@ class UtestidMapping(models.Model):
 
     utestid = models.ForeignKey(Utestid)
 
-    utestid_name = models.CharField(
+    sender_utestid_name = models.CharField(
         max_length=10)
+
+    def __str__(self):
+        return '{}: {}'.format(sender.name, self.sender_utestid_name)
 
     class Meta:
         app_label = 'getresults_astm'
