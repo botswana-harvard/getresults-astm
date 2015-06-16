@@ -2,10 +2,11 @@ from astm.server import BaseRecordsDispatcher
 
 from getresults_astm.records import CommonOrder, CommonPatient, CommonResult, Header, CommonComment
 
-from .mixins import DispatcherDbMixin
+
+from getresults_astm.mixins import GetResultsDispatcherMixin, DmisDispatcherMixin
 
 
-class Dispatcher(DispatcherDbMixin, BaseRecordsDispatcher):
+class Dispatcher(BaseRecordsDispatcher):
 
     records = {}
 
@@ -52,3 +53,11 @@ class Dispatcher(DispatcherDbMixin, BaseRecordsDispatcher):
         if self.records:
             self.save_to_db(self.records)
         self.records = {}
+
+
+class GetResultsDispatcher(GetResultsDispatcherMixin, Dispatcher):
+    pass
+
+
+class DmisDispatcher(DmisDispatcherMixin, Dispatcher):
+    pass

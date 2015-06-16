@@ -17,7 +17,7 @@ from getresults.utils import (
     load_panel_items_from_csv, load_utestids_from_csv, load_panels_from_csv
 )
 
-from ..mixins import DispatcherDbMixin
+from ..mixins import GetResultsDispatcherMixin
 from ..models import Sender, UtestidMapping
 from ..records import CommonOrder, CommonResult, CommonPatient, Header
 
@@ -37,8 +37,8 @@ class TestGetresult(TestCase):
         load_panel_items_from_csv()
 
     def test_mixin_db_update_single(self):
-        DispatcherDbMixin.create_dummy_records = True
-        mixin = DispatcherDbMixin()
+        GetResultsDispatcherMixin.create_dummy_records = True
+        mixin = GetResultsDispatcherMixin()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
         message = '2P|1|WT33721|||^||||||||||||||||||20150108072200|||||||||'
@@ -64,8 +64,8 @@ class TestGetresult(TestCase):
         self.assertGreater(ResultItem.objects.filter(value='44.42893').count(), 0)
 
     def test_mixin_db_update_multi(self):
-        DispatcherDbMixin.create_dummy_records = True
-        mixin = DispatcherDbMixin()
+        GetResultsDispatcherMixin.create_dummy_records = True
+        mixin = GetResultsDispatcherMixin()
         results = []
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
@@ -122,8 +122,8 @@ class TestGetresult(TestCase):
         self.assertIsNone(mixin.save_to_db(records))
 
     def test_no_header1(self):
-        DispatcherDbMixin.create_dummy_records = True
-        mixin = DispatcherDbMixin()
+        GetResultsDispatcherMixin.create_dummy_records = True
+        mixin = GetResultsDispatcherMixin()
         records = {
             'H': None,
             'P': None,
@@ -132,8 +132,8 @@ class TestGetresult(TestCase):
         self.assertRaises(AttributeError, mixin.save_to_db, records)
 
     def test_no_header2(self):
-        DispatcherDbMixin.create_dummy_records = True
-        mixin = DispatcherDbMixin()
+        GetResultsDispatcherMixin.create_dummy_records = True
+        mixin = GetResultsDispatcherMixin()
         message = '3P|2|WT36840|||^||||||||||||||||||20150108072200|||||||||'
         patient = CommonPatient(*decode_record(message[1:]))
         records = {
@@ -144,8 +144,8 @@ class TestGetresult(TestCase):
         self.assertRaises(AttributeError, mixin.save_to_db, records)
 
     def test_patient_as_list(self):
-        DispatcherDbMixin.create_dummy_records = True
-        mixin = DispatcherDbMixin()
+        GetResultsDispatcherMixin.create_dummy_records = True
+        mixin = GetResultsDispatcherMixin()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
         message = '3P|2|WT36840|||^||||||||||||||||||20150108072200|||||||||'
@@ -158,8 +158,8 @@ class TestGetresult(TestCase):
         self.assertRaises(AttributeError, mixin.save_to_db, records)
 
     def test_patient(self):
-        DispatcherDbMixin.create_dummy_records = True
-        mixin = DispatcherDbMixin()
+        GetResultsDispatcherMixin.create_dummy_records = True
+        mixin = GetResultsDispatcherMixin()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
         message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
@@ -176,8 +176,8 @@ class TestGetresult(TestCase):
         self.assertEqual(patient.gender, patient_record.sex)
 
     def test_order_save(self):
-        DispatcherDbMixin.create_dummy_records = True
-        mixin = DispatcherDbMixin()
+        GetResultsDispatcherMixin.create_dummy_records = True
+        mixin = GetResultsDispatcherMixin()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
         message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
@@ -197,8 +197,8 @@ class TestGetresult(TestCase):
         self.assertEqual(order.report_type, order_record.report_type)
 
     def test_result_save(self):
-        DispatcherDbMixin.create_dummy_records = True
-        mixin = DispatcherDbMixin()
+        GetResultsDispatcherMixin.create_dummy_records = True
+        mixin = GetResultsDispatcherMixin()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
         message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
@@ -241,8 +241,8 @@ class TestGetresult(TestCase):
         self.assertEqual(result.analyzer_name, result_record.instrument)
 
     def test_no_create_dummy(self):
-        DispatcherDbMixin.create_dummy_records = False
-        mixin = DispatcherDbMixin()
+        GetResultsDispatcherMixin.create_dummy_records = False
+        mixin = GetResultsDispatcherMixin()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
         message = '3P|2|WT36840|||^||19640505|F|||||||||||||||20150108072200|||||||||'
@@ -259,8 +259,8 @@ class TestGetresult(TestCase):
         self.assertRaises(ValueError, mixin.save_to_db, records)
 
     def test_find_existing_order(self):
-        DispatcherDbMixin.create_dummy_records = True
-        mixin = DispatcherDbMixin()
+        GetResultsDispatcherMixin.create_dummy_records = True
+        mixin = GetResultsDispatcherMixin()
         patient = Patient.objects.create(
             patient_identifier='123456789',
             registration_datetime=timezone.now())
@@ -334,8 +334,8 @@ class TestGetresult(TestCase):
             order_datetime=timezone.now(),
             panel=panel,
             aliquot=aliquot)
-        DispatcherDbMixin.create_dummy_records = None
-        mixin = DispatcherDbMixin()
+        GetResultsDispatcherMixin.create_dummy_records = None
+        mixin = GetResultsDispatcherMixin()
         mixin.save_to_db(records)
         result = Result.objects.get(order=order)
         self.assertEquals(ResultItem.objects.filter(result=result).count(), 9)
@@ -369,7 +369,7 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            utestid_name='ALPL')
+            sender_utestid_name='ALPL')
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid
@@ -379,7 +379,7 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            utestid_name='ALTL')
+            sender_utestid_name='ALTL')
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
@@ -389,7 +389,7 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            utestid_name='CL-I')
+            sender_utestid_name='CL-I')
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
@@ -399,7 +399,7 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            utestid_name='CO2-L')
+            sender_utestid_name='CO2-L')
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
@@ -409,7 +409,7 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            utestid_name='CREJ')
+            sender_utestid_name='CREJ')
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
@@ -419,7 +419,7 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            utestid_name='K-I')
+            sender_utestid_name='K-I')
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
@@ -429,7 +429,7 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            utestid_name='NA-I')
+            sender_utestid_name='NA-I')
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
@@ -439,7 +439,7 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            utestid_name='PHOS')
+            sender_utestid_name='PHOS')
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid
@@ -449,7 +449,7 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            utestid_name='UREL')
+            sender_utestid_name='UREL')
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,

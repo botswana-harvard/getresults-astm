@@ -17,8 +17,10 @@ tz = pytz.timezone(settings.TIME_ZONE)
 class HeaderError(Exception):
     pass
 
+__all__ = ['GetResultsDispatcherMixin', 'DmisDispatcherMixin']
 
-class DispatcherDbMixin(object):
+
+class BaseDispatcherMixin(object):
 
     create_dummy_records = None  # if True create dummy patient, receive, aliquot and order
 
@@ -74,6 +76,9 @@ class DispatcherDbMixin(object):
         except Exception:
             # print(e)
             raise
+
+
+class GetResultsDispatcherMixin(BaseDispatcherMixin):
 
     def sender(self, sender_name, sender_description):
         try:
@@ -179,22 +184,23 @@ class DispatcherDbMixin(object):
             )
         return result
 
-    def utestid(self, name, sender):
+    def utestid(self, sender_utestid_name, sender):
         try:
-            utestid_mapping = UtestidMapping.objects.get(utestid_name=name, sender=sender)
+            utestid_mapping = UtestidMapping.objects.get(
+                sender_utestid_name=sender_utestid_name, sender=sender)
             utestid = utestid_mapping.utestid
         except UtestidMapping.DoesNotExist:
             try:
-                utestid = Utestid.objects.get(name=name)
+                utestid = Utestid.objects.get(name=sender_utestid_name)
             except Utestid.DoesNotExist:
                 utestid = Utestid.objects.create(
-                    name=name,
+                    name=sender_utestid_name,
                     value_type='absolute',
                     value_datatype='string',
                     description='unknown from interface')
             utestid_mapping = UtestidMapping.objects.create(
                 utestid=utestid,
-                utestid_name=name,
+                sender_utestid_name=sender_utestid_name,
                 sender=sender)
         return utestid
 
@@ -230,3 +236,9 @@ class DispatcherDbMixin(object):
             pass
         result_item.save()
         return result_item
+
+
+class DmisDispatcherMixin(BaseDispatcherMixin):
+
+    def save_to_db(self, records):
+        raise NotImplemented()
