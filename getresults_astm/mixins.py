@@ -11,8 +11,6 @@ tz = pytz.timezone(settings.TIME_ZONE)
 class HeaderError(Exception):
     pass
 
-__all__ = ['GetResultsDispatcherMixin', 'DmisDispatcherMixin']
-
 
 class BaseDispatcherMixin(object):
 
