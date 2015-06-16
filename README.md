@@ -6,11 +6,9 @@
 
 ASTM interface for getresults using python-astm.
 
-The sample message in the testdata folder is output from Roche PSM. The python-astm records are subclasses to accept
-data from PSM, which is rather incomplete in our implementation. For example, PSM does not report the panel to us (just
-sends 'ALL')
+The sample message in the testdata folder is output from our implementation of Roche PSM. The python-astm records classes are subclasses to accept data from PSM, which is rather incomplete in our implementation. For example, our implementation of PSM does not report birth date, gender ,etc. The testing panel is also not known by our implementation and just sends 'ALL'. 
 
-We expect the order identifier to be in the output and matched to an existing order in the database.
+Because of this we expect the order identifier to be in the ASTM output and matched to an existing order in the receiving database.
 
 Missing data items, such as UTESTID's, can be created on the fly to avoid disruption in data flow. However creating
 fake orders, aliquots, receive records and patient records is not ideal.
