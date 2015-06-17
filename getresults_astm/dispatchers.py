@@ -95,9 +95,10 @@ class GetResultsDispatcher(GetResultsDispatcherMixin, Dispatcher):
                                 result_record.status,
                                 result_record.instrument,
                             )
-                        utestid = self.utestid(result_record.test, sender)
+                        utestid_mapping = self.utestid_mapping(result_record.test, sender, panel.name)
+                        utestid = utestid_mapping.utestid
                         panel_item = self.panel_item(panel, utestid)
-                        self.result_item(result, utestid, panel_item, result_record)
+                        self.result_item(result, utestid, result_record)
                     # add in missing utestid's
                     utestid_names = [p.utestid.name for p in PanelItem.objects.filter(panel=panel)]
                     result_utestid_names = [r.utestid.name for r in ResultItem.objects.filter(result=result)]

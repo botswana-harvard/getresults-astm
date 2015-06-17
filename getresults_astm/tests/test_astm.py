@@ -368,7 +368,8 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            sender_utestid_name='ALPL')
+            sender_utestid_name='ALPL',
+            panel=panel)
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid
@@ -378,7 +379,8 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            sender_utestid_name='ALTL')
+            sender_utestid_name='ALTL',
+            panel=panel)
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
@@ -388,7 +390,8 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            sender_utestid_name='CL-I')
+            sender_utestid_name='CL-I',
+            panel=panel)
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
@@ -398,7 +401,8 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            sender_utestid_name='CO2-L')
+            sender_utestid_name='CO2-L',
+            panel=panel)
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
@@ -408,7 +412,8 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            sender_utestid_name='CREJ')
+            sender_utestid_name='CREJ',
+            panel=panel)
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
@@ -418,7 +423,8 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            sender_utestid_name='K-I')
+            sender_utestid_name='K-I',
+            panel=panel)
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
@@ -428,7 +434,8 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            sender_utestid_name='NA-I')
+            sender_utestid_name='NA-I',
+            panel=panel)
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
@@ -438,7 +445,8 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            sender_utestid_name='PHOS')
+            sender_utestid_name='PHOS',
+            panel=panel)
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid
@@ -448,7 +456,8 @@ class TestGetresult(TestCase):
         UtestidMapping.objects.create(
             sender=sender,
             utestid=utestid,
-            sender_utestid_name='UREL')
+            sender_utestid_name='UREL',
+            panel=panel)
         PanelItem.objects.create(
             panel=panel,
             utestid=utestid,
