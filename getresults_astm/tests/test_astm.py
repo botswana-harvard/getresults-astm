@@ -10,7 +10,8 @@ from django.utils import timezone
 from astm import codec
 from astm.constants import ENCODING
 
-from getresults.models import Result, ResultItem, Panel, PanelItem, Utestid, Order, Sender, UtestidMapping
+from getresults.models import (
+    Result, ResultItem, Panel, PanelItem, Utestid, Order, Sender, UtestidMapping)
 from getresults_aliquot.models import Aliquot, AliquotType
 from getresults_receive.models import Patient, Receive
 from getresults.utils import (
