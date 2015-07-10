@@ -1,9 +1,6 @@
-import os
 import sys
 
-from unipath import Path
-
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
 from getresults_astm.dispatchers import Dispatcher
 from astm.server import Server

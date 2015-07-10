@@ -27,9 +27,9 @@ setup(
         'django-simple-history',
         'unipath>=1.1',
         'python-dateutil',
-        'python-astm',
+        'astm',
         'pytz',
-        '-e git+https://github.com/botswana-harvard/getresults@develop#egg=edc-base',
+        # '-e git+https://github.com/botswana-harvard/getresults@develop#egg=edc-base',
     ],
     classifiers=[
         'Environment :: Web Environment',

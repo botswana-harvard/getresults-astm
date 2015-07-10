@@ -18,7 +18,7 @@ from getresults.utils import (
     load_panel_items_from_csv, load_utestids_from_csv, load_panels_from_csv
 )
 
-from ..dispatchers import GetResultsDispatcher
+from getresults.astm.dispatchers import GetResultsDispatcher
 from ..records import CommonOrder, CommonResult, CommonPatient, Header
 
 tz = pytz.timezone(settings.TIME_ZONE)
