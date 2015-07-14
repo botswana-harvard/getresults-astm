@@ -4,7 +4,7 @@ __pycache__/
 .project
 .pydevproject
 .settings
-# test-*
+test-*
 db.sqlite3
 getresults_astm/db.sqlite3
 # C extensions
