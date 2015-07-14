@@ -71,7 +71,7 @@ class CommonOrder(OrderRecord):
     biomaterial = TextField(length=20)
     laboratory_field_2 = TextField(length=12)
     priority = SetField(default='S', values=('S', 'R'))
-    sample_id = TextField(required=True, length=12)
+    sample_id = TextField(required=True, length=16)
     user_field_1 = TextField(length=20)
     user_field_2 = TextField(length=1024)
     test = TextField(length=5)
