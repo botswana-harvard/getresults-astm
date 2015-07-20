@@ -106,3 +106,5 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 GIT_DIR = BASE_DIR.ancestor(1)
+
+ALIQUOT_IDENTIFIER_PREFIX_PATTERN = r'[A-Z]{3}[0-9]{4}'

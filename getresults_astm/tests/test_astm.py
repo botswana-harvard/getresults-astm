@@ -266,15 +266,11 @@ class TestGetresult(TestCase):
             patient_identifier='123456789',
             registration_datetime=timezone.now())
         receive = Receive.objects.create(
-            receive_identifier=uuid4(),
             patient=patient,
             receive_datetime=timezone.now(),
         )
         aliquot_type = AliquotType.objects.create(alpha_code='WB', numeric_code='02')
-        aliquot = Aliquot.objects.create(
-            aliquot_identifier='123456789',
-            receive=receive,
-            aliquot_type=aliquot_type)
+        aliquot = Aliquot.objects.create_primary(receive, aliquot_type.numeric_code)
         panel = Panel.objects.create(name='chem')
         new_order = Order.objects.create(
             order_identifier='WT33721',
@@ -321,15 +317,12 @@ class TestGetresult(TestCase):
             patient_identifier='123456789',
             registration_datetime=timezone.now())
         receive = Receive.objects.create(
-            receive_identifier=uuid4(),
             patient=patient,
             receive_datetime=timezone.now(),
         )
         aliquot_type = AliquotType.objects.create(alpha_code='WB', numeric_code='02')
-        aliquot = Aliquot.objects.create(
-            aliquot_identifier='123456789',
-            receive=receive,
-            aliquot_type=aliquot_type)
+        aliquot = Aliquot.objects.create_primary(
+            receive, aliquot_type.numeric_code)
         order = Order.objects.create(
             order_identifier='NEWORDER',
             order_datetime=timezone.now(),
