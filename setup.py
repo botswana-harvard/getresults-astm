@@ -23,8 +23,8 @@ setup(
     zip_safe=False,
     keywords='ASTM getresults LIMS LIS interface',
     install_requires=[
-        'Django>=1.8',
-        'django-simple-history',
+        # 'Django>=1.7',
+        # 'django-simple-history',
         'unipath>=1.1',
         'python-dateutil',
         'astm',

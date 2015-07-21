@@ -8,9 +8,6 @@ from astm.records import (
     TerminatorRecord
 )
 
-from getresults.models import Result, Panel
-
-
 __all__ = ['Header', 'CommonPatient', 'CommonOrder',
            'CommonResult', 'CommonComment', 'Terminator']
 
@@ -61,7 +58,7 @@ class CommonPatient(PatientRecord):
     laboratory_id = TextField(length=16)
     location = TextField(length=20)
     name = ComponentField(PatientName)
-    practice_id = TextField(required=True, length=12)
+    practice_id = TextField(required=True, length=20)
     sex = SetField(values=('M', 'F', None, 'I'))
     special_2 = SetField(values=(0, 1), field=IntegerField())
     admission_date = DateTimeField(required=True)
@@ -69,13 +66,15 @@ class CommonPatient(PatientRecord):
 
 class CommonOrder(OrderRecord):
     biomaterial = TextField(length=20)
-    laboratory_field_2 = TextField(length=12)
     priority = SetField(default='S', values=('S', 'R'))
     sample_id = TextField(required=True, length=16)
     user_field_1 = TextField(length=20)
     user_field_2 = TextField(length=1024)
     test = TextField(length=5)
     created_at = DateTimeField(required=True)
+    sampled_at = DateTimeField(required=True)
+    laboratory_field_1 = TextField(length=25)
+    laboratory_field_2 = TextField(length=25)
     action_code = TextField(length=1, required=True)
     report_type = TextField(length=1, required=True)
 
@@ -83,7 +82,7 @@ class CommonOrder(OrderRecord):
 class CommonResult(ResultRecord):
     abnormal_flag = TextField(required=True, length=1)
     completed_at = DateTimeField(required=True)
-    instrument = TextField(required=True, length=5)
+    instrument = TextField(required=True, length=10)
     operator = ComponentField(ResultOperator)
     status = SetField(default='F', values=('P', 'F'))
     test = TestField(required=True, length=10)
