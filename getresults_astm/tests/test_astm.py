@@ -6,6 +6,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.test import TestCase
 from django.utils import timezone
+from django.db import transaction
 
 from astm import codec
 from astm.constants import ENCODING
@@ -21,21 +22,29 @@ from getresults.utils import (
 from getresults.astm import GetResultsDispatcher
 
 from ..records import CommonOrder, CommonResult, CommonPatient, Header
+from getresults_astm import DbDispatcher
 
 tz = pytz.timezone(settings.TIME_ZONE)
+
+
+class DummyDispatcher(DbDispatcher):
+
+    def save_to_db(self, records):
+        raise NotImplementedError()
 
 
 def decode_record(r):
     return codec.decode_record(r.encode(), ENCODING)
 
 
-class TestGetresult(TestCase):
+class TestAstm(TestCase):
 
     def setUp(self):
         """Load testdata."""
-        load_panels_from_csv()
-        load_utestids_from_csv()
-        load_panel_items_from_csv()
+        with transaction.atomic():
+            load_panels_from_csv()
+            load_utestids_from_csv()
+            load_panel_items_from_csv()
 
     def test_dispatcher_db_update_single(self):
         GetResultsDispatcher.create_dummy_records = True
@@ -53,7 +62,8 @@ class TestGetresult(TestCase):
             'P': patient,
             'O': order,
             'R': [result]}
-        dispatcher.save_to_db(records)
+        with transaction.atomic():
+            dispatcher.save_to_db(records)
         self.assertGreater(Panel.objects.filter(name='ALL').count(), 0)
         panel = Panel.objects.get(name='ALL')
         self.assertGreater(Order.objects.filter(panel=panel).count(), 0)
@@ -123,18 +133,18 @@ class TestGetresult(TestCase):
         self.assertIsNone(dispatcher.save_to_db(records))
 
     def test_no_header1(self):
-        GetResultsDispatcher.create_dummy_records = True
-        dispatcher = GetResultsDispatcher()
+        DummyDispatcher.create_dummy_records = True
+        dispatcher = DummyDispatcher()
         records = {
             'H': None,
             'P': None,
             'O': None,
             'R': []}
-        self.assertRaises(AttributeError, dispatcher.save_to_db, records)
+        self.assertRaises(NotImplementedError, dispatcher.save_to_db, records)
 
     def test_no_header2(self):
-        GetResultsDispatcher.create_dummy_records = True
-        dispatcher = GetResultsDispatcher()
+        DummyDispatcher.create_dummy_records = True
+        dispatcher = DummyDispatcher()
         message = '3P|2|WT36840|||^||||||||||||||||||20150108072200|||||||||'
         patient = CommonPatient(*decode_record(message[1:]))
         records = {
@@ -142,21 +152,21 @@ class TestGetresult(TestCase):
             'P': patient,
             'O': None,
             'R': []}
-        self.assertRaises(AttributeError, dispatcher.save_to_db, records)
+        self.assertRaises(NotImplementedError, dispatcher.save_to_db, records)
 
     def test_patient_as_list(self):
-        GetResultsDispatcher.create_dummy_records = True
-        dispatcher = GetResultsDispatcher()
+        DummyDispatcher.create_dummy_records = True
+        dispatcher = DummyDispatcher()
         message = '1H|\^&|||PSM^Roche Diagnostics^PSM^2.01.00.c|||||||P||20150108072227'
         header = Header(*decode_record(message[1:]))
-        message = '3P|2|WT36840|||^||||||||||||||||||20150108072200|||||||||'
+        message = '3P|2|WT36840|WT36840||^||||||||||||||||||20150108072200|||||||||'
         patient = CommonPatient(*decode_record(message[1:]))
         records = {
             'H': header,
             'P': [patient],
             'O': None,
             'R': []}
-        self.assertRaises(AttributeError, dispatcher.save_to_db, records)
+        self.assertRaises(NotImplementedError, dispatcher.save_to_db, records)
 
     def test_patient(self):
         GetResultsDispatcher.create_dummy_records = True
@@ -190,7 +200,8 @@ class TestGetresult(TestCase):
             'P': patient,
             'O': order_record,
             'R': []}
-        dispatcher.save_to_db(records)
+        with transaction.atomic():
+            dispatcher.save_to_db(records)
         order = Order.objects.get(order_identifier=order_record.sample_id)
         self.assertEqual(order.order_datetime, tz.localize(order_record.created_at))
         self.assertEqual(order.panel.name, order_record.test)
@@ -232,7 +243,8 @@ class TestGetresult(TestCase):
             'P': patient,
             'O': order_record,
             'R': result_record}
-        dispatcher.save_to_db(records)
+        with transaction.atomic():
+            dispatcher.save_to_db(records)
         order = Order.objects.get(order_identifier=order_record.sample_id)
         result_record = result_record[0]
         result = Result.objects.get(order=order)
