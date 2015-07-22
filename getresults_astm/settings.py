@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+import sys
 from unipath import Path
 
 # BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -31,18 +32,23 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
-INSTALLED_APPS = (
+INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'getresults_receive',
-    'getresults_aliquot',
-    'getresults',
     'getresults_astm',
-)
+]
+
+if 'test' in sys.argv:
+    INSTALLED_APPS.remove('getresults_astm')
+    INSTALLED_APPS.append('getresults_receive')
+    INSTALLED_APPS.append('getresults_aliquot')
+    INSTALLED_APPS.append('getresults')
+    INSTALLED_APPS.append('getresults_astm')
+
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',

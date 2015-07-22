@@ -16,6 +16,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         host = str(options['host'][0]) or 'localhost'
         port = int(options['port'][0]) or 20581
-        sys.stdout.write('Connecting to {} on port {} ...'.format(host, port))
+        sys.stdout.write('Connecting to {} on port {} ...\n'.format(host, port))
         server = Server(host=host, port=port, dispatcher=Dispatcher)
         server.serve_forever()

@@ -3,6 +3,8 @@ import os
 from setuptools import setup
 from setuptools import find_packages
 
+from getresults_astm.version import __version__
+
 with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
     README = readme.read()
 
@@ -11,7 +13,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='getresults-astm',
-    version='0.1.0dev0',
+    version=__version__,
     author=u'Erik van Widenfelt',
     author_email='ew2789@gmail.com',
     packages=find_packages(),
@@ -23,13 +25,10 @@ setup(
     zip_safe=False,
     keywords='ASTM getresults LIMS LIS interface',
     install_requires=[
-        # 'Django>=1.7',
-        # 'django-simple-history',
         'unipath>=1.1',
         'python-dateutil',
         'astm',
         'pytz',
-        # '-e git+https://github.com/botswana-harvard/getresults@develop#egg=edc-base',
     ],
     classifiers=[
         'Environment :: Web Environment',
